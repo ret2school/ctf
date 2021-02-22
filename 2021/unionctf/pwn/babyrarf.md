@@ -1,9 +1,3 @@
-+++
-title = "[Unionctf 2021 - pwn] babyrarf"
-tags = ["ctf", "unionctf 2021", "pwn", "buffer overflow", "nasm"]
-date = "2021-02-21"
-+++
-
 Welcome guys, 
 
 This Write-Up is about de first pwn challenge of [unionctf](https://ctf.cr0wn.uk): [babyrarf]().
