@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<link href='https://fonts.googleapis.com/css?family=VT323|Inconsolata' rel='stylesheet' type='text/css'>
+	<script src="countdown.js"></script>
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css" integrity="sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r" crossorigin="anonymous">
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
+	<link rel="stylesheet" type="text/css" href="styles.css">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>UTCTF</title>
+
+</head>
+
+<body>
+	<div id="wrapper">
+
+	<!--
+
+                   __
+                  / \--..____
+                   \ \       \-----,,,..
+                    \ \       \         \--,,..
+                     \ \       \         \  ,'
+                      \ \       \         \ ``..
+                       \ \       \         \-''
+                        \ \       \__,,--'''
+                         \ \       \.
+                          \ \      ,/
+                           \ \__..-
+                            \ \
+                             \ \
+                              \ \   
+                               \ \
+                                \ \
+                                 \ \
+                                  \ \
+                                   \ \
+                                    \ \
+
+
+	utflag{you_found_me_0123959}
+
+
+	-->
+
+		<div id="header" class="col-md-6 col-md-offset-3">
+			<span id="flickertext" class="sevensegment">UTCTF</span>
+                        <h2>March 12 - 14, 2021 | <span id="count"></span></h2>
+			<br>	
+				<h2><a href="https://utctf.live">contest website</a> - register now!</h2>
+				<br>
+				<h2><a href="http://eepurl.com/gTuokn">subscribe to the mailing list</a> for updates</h2>
+				<h2>join the <a href="https://isss.io/utctfdiscord">discord</a></h2>
+				<h2>view the event on <a href="https://ctftime.org/event/1177/">CTFtime</a></h2>
+		</div>
+
+		<div id="info" class="col-md-8 col-md-offset-2">
+				<p>For additional contest or sponsorship information, please contact us at <a href="mailto:contact@isss.io">contact@isss.io</a>.</p>
+
+				<h2>What is a CTF?</h2>
+				<p>A CTF, or "Capture the Flag" competition, is a type of computer security contest. Strings of text, referred to as "flags," are hidden or encrypted in a series of challenges.
+					During the competition, participants try to decrypt, hack, reverse-engineer, or exploit the challenges in order to gain access to the flag.
+					For each flag retrieved, the team gets a certain number of points, and teams with the most points win.</p>
+
+				<h2>How will UTCTF be run?</h2>
+				<p>UTCTF will consist of several dozen problems that gradually increase in difficulty (and point value).
+				The categories will include Binary Exploitation, Algorithms, Reverse Engineering, Cryptography, Web, and others.
+				Some problems can be solved in a matter of minutes, while others may take hours.
+				The source code and problem solutions will be released after the competition has ended.</p>
+
+				<h2>Who can compete? Who can win prizes?</h2>
+				<p>UTCTF will be open to anyone around the world, but only teams that have an address <b><u>within the United States</u></b> will be eligible for prizes. There is no limit to team sizes, but we will only be shipping enough prizes for 4 people for each team in the top 3. Team members do not need to be from the same school; however, prizes will only be shipped to one location.</p>
+
+				<h2>When?</h2>
+				<p>6 PM CST on March 12th, to 7 PM CDT on March 14th, 2021.
+
+				<h2>Where?</h2>
+				<p>The competition will be completely free, and run entirely online - the only materials teams will need are a working computer with internet access and the ability to run desktop applications.
+				Competitors should register online to form a team - registration will be opened soon, and can be done at any point before or during the contest.</p>
+
+				<h2>What is and is not allowed?</h2>
+				<p>Competitors can use search engines, Wikipedia, GitHub, books, etc. to try to solve the challenges. If they get stuck (or something is wrong with the challenge), competitors can ask challenge authors for a hint, but this hint will be shared publicly on the Discord in the interest of fairness. Competitors can also ask other competitors for small hints, but sharing of flags or explicit solutions is not allowed. Competitors are also not allowed to directly attack UTCTF infrastructure or use tools that would purposefully overwhelm the infrastructure (e.g. dirbuster). Attacking or exploiting the server, other teams, or machines not explicitly designated as targets within the problems is against the rules. This includes both breaking into such machines and denying others access to them (for example, by altering a key or ping-flooding). Engaging in any of these activites will result in your team being disqualified.</p>
+
+				<h2>Who is running UTCTF?</h2>
+				<p>UTCTF is being run by students at The University of Texas at Austin within the <a href="https://isss.io">Information & Systems Security Society (ISSS).</a></p>
+
+		</div>
+	</div>
+
+<script type="text/javascript">
+	var timespan = countdown(new Date("March 12, 2021 18:00:00"), function(ts) {
+	document.getElementById("count").textContent = padDigits(ts.days, 2) + ":" + padDigits(ts.hours, 2) + ":" + padDigits(ts.minutes, 2) + ":" + padDigits(ts.seconds, 2);
+}, countdown.DAYS | countdown.HOURS|countdown.MINUTES|countdown.SECONDS|countdown.MILLISECONDS);
+
+	function padDigits(number, digits) {
+	    return Array(Math.max(digits - String(number).length + 1, 0)).join(0) + number;
+	}
+
+	setInterval(function() {
+		if(Math.random() < .05) {
+			var element = document.getElementById('flickertext');
+			element.style.opacity = "0.2";
+			setTimeout(function() {
+				element.style.opacity = "1";
+			}, 30);
+		}
+	}, 500);
+</script>
+
+</body>
+</html>
