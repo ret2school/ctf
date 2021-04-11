@@ -25,7 +25,9 @@ pytesseract.pytesseract.tesseract_cmd = 'C:\\Program Files\\Tesseract-OCR\\tesse
 decode = pytesseract.image_to_string(r'C:\\Users\\Zeynn\\Desktop\\file.png')
 print(decode)
 ```
-**To get:**
+
+Which returns:
+
 ```
 YZE7xr8bE94J04cqritOcE+d)4WOmt 4HvmhaSElywep9xN8xBucNSDnx1XtaMeb
 
