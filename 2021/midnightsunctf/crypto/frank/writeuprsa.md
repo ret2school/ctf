@@ -1,14 +1,14 @@
 
-# MidnightSun CTF
+# MidnightSun CTF - frank
 
-## Hello world,
+Hello world,
 
 This writeup is about Midnight Sun CTF [frank] challenge on how to recover a full RSA private key, when half of it is erased.  
 Challenge therefore requires recovering the entire RSA key from this image : 
 
 ![image](rsa.png)
 
-# Get the part of the private key visible:
+#### Get the part of the private key visible:
 
 The first step of the challenge is to **recover the visible part**, to do this I quickly created a small **OCR** script with the **pytesseract** module in Python, to facilitate the recovery task.
 
@@ -163,9 +163,9 @@ a1dc30fdeccf8566acd4aa5235a7515bdcda4a85ab5f63b620b7667ac3bec1f8e322f13eab22978b
 36d9c329e1fad8fee9d9c5e5912bcdab37877e8d2626c9ff4d097c0af665eeabfa578e56815ea201ebe9
 f7b300c51905fbdf688f046bbd8836e1b10eaf76844102da9c1e60932c1d9da9786b9ef51230c512
 
-# Look at the parts of the key that we have  
+#### Look at the parts we have  
 
-After being interested in how a private rsa key was created, we can observe that there is precisely a certain logic in the encoding in the order: *n, e, d, p, q, d mod(p-1), d mod(q-1) and q^-1 mod p*. 
+After being interested on how a private rsa key was created, we can observe that there is precisely a certain logic in the encoding in the order: *n, e, d, p, q, d mod(p-1), d mod(q-1) and q^-1 mod p*. 
 
 ```
 PrivateKeyInfo ::= SEQUENCE {
@@ -191,7 +191,6 @@ RSAPrivateKey ::= SEQUENCE {
 As before we have just decoded the rsa key we can observe the structure and see that its parts are separated by **02 82 01 01** and as they showed it on the cryptohack [site](https://blog.cryptohack.org/twitter-secrets) with a fictitious key and the key to recover 02 82 01 01 is indeed used to separate :  *n, e, d, p, q, d mod (p-1), d mod (q-1) and q ^ -1 mod p* .
 
 ![image](example.png)
-  
 
 As cryptohack [says](https://blog.cryptohack.org/twitter-secrets) they precisely indicate that **02 82 01 01** corresponds to : 
 
@@ -210,16 +209,17 @@ So we now know that we have:
 >All => d mod (q-1) = dq  
 >All => (inverse of q) mod p  
 
-# Recup key-public to get n and e:  
+#### Recup key-public to get n and e:  
 
-We also have *access* to another **authorized_keys file** which contains the public keys **n** and **e**, so we can get them very easily with **cat** :  
+We also have *access* to another **authorized_keys file** which contains the public keys **n** and **e**, so we can get them very easily with **cat**:  
 ```
 ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQC/okaokb6dLlO889ktcFKuAzLbvCcy5Il2TiVIVzzibe+9FfH2W0RHtQ5A3aIvjbZKneQxgy9EiN+U28DOp9yBW4zAg11U77VtuF528Wp5ApwwN8SUD5YPBQssh3CFm6bKqg+O9F93J+/whzA8QGL8C2EYrN/BpOUSJKds0Az6cYYm3sqER+iQ64RDa9K2TrO5gfP/iyBTOydPD0ZNLbvsPMNk6YzuND+pjRGwtH9vxV5g0H1Pak1k+tXrcUSgpgnNkJ5Gptm5CgC0qF5yxR/+DMy/dOAc7jUhIZMeX1sWTd9rTSuQMAB/w3fONe6yXNBxaAavi5w3o1Cu7xgTUOYBUnAYaX+07AqTqu9PTrSpK08bZrnLf3oItdAUMsNStI4DiqxbdYX6TcccqdYLI7Cb3HdbBNRuMy3l25ZelSRyDaFT7ZXnMsGCbcWg3UnEbGCudAMHzU5aFLDYZJUpQsgYQblSw9EF7R/OLa8uy57CBGaqoM0wtU56A2sOPTGVbDVF2HmObg6rijqn4I6NBQsBeshANIil/amw08MJZVVK7jNYDLret23ky/uSyO/IRdp0KcByWk7vEW36J2itQOkRhKBVAgPIO3Vudez85TYoRb8ESAZ4OJtrBMP0l66lnXc5+L9keckKLZp24DNkb95ULd2g/7/jqFtv6gzFamb93w== u@eniac
 ```
-Now we just have to use **ssh-keygen** to decode the key :  
->ssh-keygen -e -f ~/.ssh/id_rsa.pub -m pem >ssh-pub.pem  
+Now we just have to use **ssh-keygen** to decode the key:  
 
-And obtain this : 
+``>ssh-keygen -e -f ~/.ssh/id_rsa.pub -m pem >ssh-pub.pem``
+
+Which gives this: 
 ```
 -----BEGIN RSA PUBLIC KEY-----
 MIICCgKCAgEAv6JGqJG+nS5TvPPZLXBSrgMy27wnMuSJdk4lSFc84m3vvRXx9ltE
@@ -235,7 +235,8 @@ egNrDj0xlWw1Rdh5jm4Oq4o6p+COjQULAXrIQDSIpf2psNPDCWVVSu4zWAy63rdt
 awTD9JeupZ13Ofi/ZHnJCi2aduAzZG/eVC3doP+/46hbb+oMxWpm/d8CAwEAAQ==
 -----END RSA PUBLIC KEY-----
 ```
-With this [site](https://8gwifi.org/PemParserFunctions.jsp) I was able to obtain *encryption module (n)* and *public exponent (e)* :
+With this [site](https://8gwifi.org/PemParserFunctions.jsp) I was able to obtain *encryption module (n)* and *public exponent (e)*:
+
 ```
 Algo RSA
 Format X.509
@@ -247,14 +248,15 @@ bfa246a891be9d2e53bcf3d92d7052ae0332dbbc2732e489764e2548573ce26defbd15f1f65b4447
 
 public exponent: 10001
 ```
-# Recup q and p:
 
-With some math formulas we can succeed in expressing **p** and **q** according to what we have, with **kp** and **kq** our only strangers :  
+#### Recup q and p:
+
+With some math formulas we can succeed in expressing **p** and **q** according to what we have, with **kp** and **kq** our only strangers:  
 ```
 p = (e*dp-1)/kp + 1   and q = (e*dq-1)/kq + 1
 ```
 
-Perfect, you just have to make a script to recover its **p** and **q** potentials by trying to bruteforce **kp** and **kq** :
+Perfect, you just have to make a script to recover its **p** and **q** potentials by trying to bruteforce **kp** and **kq**:
 ```python
 from Crypto.Util.number import bytes_to_long, isPrime
 from sympy import *
@@ -293,9 +295,8 @@ print(n//q)
 ```
 >32155793883644309494149365087347710275210633774631897274003001908876018851960968012981271807389852904017267710405842990613181825323298497180721462889930852141756696942713059737825259562300443091116514916928396257101370860052927606384048304583938193088254729901128992755541135185322798527530512122498248043845789461978413935354215871986482151417756534584220556107891332673683000687165418919940645597668777626845600908432978474596080126672805046918964956144371065049005805638187590643592564866189148070656840995258832683463131564291944605671726345796937320632480267178246999762145360703260951002442725449730325007240379
 
-
-We now know the **correct p.**
-After just need to build a key
+Now we know the **correct p.**
+And so we just need to build a now key:
 ```python
 from Crypto.PublicKey import RSA
 
@@ -366,7 +367,6 @@ XqIB6+n3swDFGQX732iPBGu9iDbhsQ6vdoRBAtqcHmCTLB2dqXhrnvUSMMUS
 ```
 And send a **request** to the ssh server with this authentication key to obtain the flag.
 
-
 ```
 >> chmod 600 final_key.pem
 >> ssh -i final_key.pem -p 2222 frank@backup-01.play.midnightsunctf.se
@@ -374,4 +374,4 @@ And send a **request** to the ssh server with this authentication key to obtain 
 And the ssh server returns the flag to us : **midnight{D0_n07_s0w_p4r75_0f_y0ur_pr1v473}**.
 ;)    
 
-## Zeynn and Archie Bloom
+#### Zeynn and Archie Bloom
