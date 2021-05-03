@@ -7,7 +7,7 @@
 As soon as I saw this description, I got hyped, "Cool a browser exploit !" I thought. "It's the perfect occasion to learn more about WebKit and JavaScriptCore"... What a fool.
 
 Checksec gives us the following output :
-![](@attachment/Clipboard_2021-04-30-20-43-43.png)
+![](attachment/Clipboard_2021-04-30-20-43-43.png)
 
 Keep in mind that there is no NX so we assume that all pages, including the stack and the heap are executable on the remote server.
 
@@ -19,13 +19,13 @@ libjavascriptcoregtk-4.0.so.18 => /lib/x86_64-linux-gnu/libjavascriptcoregtk-4.0
 So no exploit for a custom version of WebKit or JSCore...
 
 Jumping in Binary Ninja, we can see a bunch of C++ functions
-![](@attachment/Clipboard_2021-04-30-20-55-21.png)
+![](attachment/Clipboard_2021-04-30-20-55-21.png)
 
 Starting from the top, we have the `addBrowser` function which uses the `memcpy` function to concatenate "FCSC Browser - " with the input string using the size of the input string. Keep that in mind.
-![](@attachment/Clipboard_2021-04-30-21-01-16.png)
+![](attachment/Clipboard_2021-04-30-21-01-16.png)
 
 The `webview_title_change` function calls the `addBrowser` function with the utf8-decoded (with the `decode_utf8` function) page title retrieved with `webkit_web_view_get_title` function.
-![](@attachment/Clipboard_2021-04-30-21-01-46.png)
+![](attachment/Clipboard_2021-04-30-21-01-46.png)
 
 Well then... this is pretty straightforward. Since we control the page title we have an overflow in the `addBrowser` function. That's the good part. The annoying part is that we can't use null bytes since it would terminate our payload.
 
@@ -61,7 +61,7 @@ We simply use JavaScript to create an "egg finder" that will find how many bytes
 The little "a" at the beginning is just to make sure that the rest of the payload is 8-bytes aligned, making it easier to read (or maybe only prettier).
 
 Once the browser ran in `gdb`, it segfault at the return of the function and we can see 8 "R"s at the top of the stack... We control the return address at `RRRRRRRR`.
-![](@attachment/Clipboard_2021-05-01-22-23-50.png)
+![](attachment/Clipboard_2021-05-01-22-23-50.png)
 
 ## Crafting the ropchain
 "Easy !" you would think, as I did, but the absence of a null byte prevents you from crafting any ropchain longer than a single quadword (8 bytes) since pretty much every address contains several null bytes. So either we have to find another vuln that we can chain with this overflow (which I didn't find), or... you have to find a sort of "one ROP gadget" in the binary to jump on our page title.
@@ -98,7 +98,7 @@ No gadget found. At this point, I entered a phase of despair and since the first
 Please take a moment to admire the gadget.
 
 Replace the all the `R` with `payload += String.fromCharCode(0xdf, 0x3e, 0x40);` in order to jump on our gadget.
-![](@attachment/Clipboard_2021-05-01-22-59-07.png)
+![](attachment/Clipboard_2021-05-01-22-59-07.png)
 Only one nibble, in this case the four heaviest bits, of the `ah` reg is controlled by the ASLR so we'll just have to send multiple times our exploit in case it doesn't work straight away.
 I found [this reverse-shell shellcode](http://shell-storm.org/shellcode/files/shellcode-857.php) and luckily enough, it didn't have any null byte in it. Once modified, craft the final exploit :
 ```html
