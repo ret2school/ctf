@@ -302,6 +302,7 @@ uint64_t virt2phys(void* p)
 		phys = (phys & ((1ULL << 54) - 1)) * 0x1000;
 		// flips out the status bits, and shifts the physical frame address to 64 bits
 		return phys;
+}
 ```
 
 To interact with the device we can write the code right bellow:
