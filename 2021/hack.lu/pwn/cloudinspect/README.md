@@ -9,12 +9,16 @@ The `flag` is located right next to the hypervisor. Go get it!
 
 ## Vulnerable PCI device
 
+
 We got several files:
+
 ```
 $ ls
 build_qemu.sh  diff_chall.txt  flag  initramfs.cpio.gz  qemu-system-x86_64  run_chall.sh  vmlinuz-5.11.0-38-generic
 ```
+
 Apparently, according to the `diff_chall.txt` , the provided qemu binary is patched with some vulnerable code. Let's take a look at the diff file:
+
 ```diff
 diff --git a/hw/misc/cloudinspect.c b/hw/misc/cloudinspect.c
 new file mode 100644
@@ -238,15 +242,17 @@ index 1cd48e8a0f..5ff263ca2f 100644
  softmmu_ss.add(when: 'CONFIG_ISA_DEBUG', if_true: files('debugexit.c'))
  softmmu_ss.add(when: 'CONFIG_ISA_TESTDEV', if_true: files('pc-testdev.c'))
 ```
+
 The first thing I did when I saw this was to check out how `memory_region_init_io` and `pci_register_bar` functions work. It sounds a bit like like a kernel device which registers a few handlers for basic operations like read / write / ioctl. Very quickly I found two write up from dangokyo [this one]( https://dangokyo.me/2018/03/28/qemu-internal-pci-device/)  and [this other one](https://dangokyo.me/2018/03/25/hitb-xctf-2017-babyqemu-write-up/), I recommend you to check it out, they are pretty interesting and well written.
 
-PCI stands for Peripheral Component Interconnect, that's a standard that describes the interactions between the cpu and the other physical devices. The PCI device handles the interactions between the system and the physical device. To do so,  the PCI handler is providing a physical address space to the kernel, reachable through the kernel abstractions from a particular virtual address space. This address can be used to cache some data, but that's mainly used to request a particular behavior from the kernel to the physical devices. These requests are written at a well defined offset in the PCI address space, that are the I/O registers. And in the same way, the devices are waiting for some values at these locations to trigger a particular behavior. Check out [thsis](https://tldp.org/LDP/tlk/dd/pci.html) and [this](https://www.kernel.org/doc/html/latest/PCI/pci.html#mmio-space-and-write-posting) to learn more about PCI devices!
+PCI stands for Peripheral Component Interconnect, that's a standard that describes the interactions between the cpu and the other physical devices. The PCI device handles the interactions between the system and the physical device. To do so,  the PCI handler is providing a physical address space to the kernel, reachable through the kernel abstractions from a particular virtual address space. This address can be used to cache some data, but that's mainly used to request a particular behavior from the kernel to the physical devices. These requests are written at a well defined offset in the PCI address space, that are the I/O registers. And in the same way, the devices are waiting for some values at these locations to trigger a particular behavior. Check out [this](https://tldp.org/LDP/tlk/dd/pci.html) and [this](https://www.kernel.org/doc/html/latest/PCI/pci.html#mmio-space-and-write-posting) to learn more about PCI devices!
 
 Now we know a bit more about PCI devices, we can see that the patched code is a PCI interface between the linux guest operating system and .. *nothing*. That's just a vulnerable PCI device which allows us to read and write four I/O registers (`CNT`, `SRC`, `CMD` and `DST`). According to these registers, we can read and write at an arbitrary location. There is a check about the size we're requesting for read / write operations at a particular offset from the `dmabuf` base address, but since we control the offset it does not matter.
 
 To write these registers from userland, we need to `mmap` the right `resource` file corresponding to the PCI device. Then we just have to read or write the mapped file at an offset corresponding to the the register we want to read / write. Furthermore, the arbitrary read / write primitives provided by the device need to read to / from a memory area from its physical address the data we want to read / write.
 
 The resource file can be found by getting a shell on the machine to take a look at the output of the `lspci` command.
+
 ```
 / # lspci -v
 00:01.0 Class 0601: 8086:7000
@@ -255,20 +261,25 @@ The resource file can be found by getting a shell on the machine to take a look 
 00:01.1 Class 0101: 8086:7010
 00:02.0 Class 00ff: 1337:1337
 ```
+
 The output of the command is structured like this:
+
 ```
 Field 1 : 00:02.0 : bus number (00), device number (02) and function (0)
 Field 2 : 00ff    : device class
 Field 3 : 1337    : vendor ID
 Field 4 : 1337    : device ID
 ```
+
 According to the source code of the PCI device, the vendor ID and the device ID are `0x1337`, the resource file corresponding to the device is so `/sys/devices/pci0000:00/0000:00:02.0/resource0`.
 
 ## Device interactions
 
+
 What we need to interact with the device is to get the physical address of a memory area we control, which would act like a shared buffer between our program and the PCI device. To do so we can `mmap` a few pages, `malloc` a buffer or just allocate onto the function's stackframe a large buffer. Given that I was following the thedangokyo's write up, I just retrieved a few functions he was using and especially for the shared buffer.
 
 The function used to get the physical address corresponding to an arbitrary pointer is based on the `/proc/self/pagemap` pseudo-file, for which you can read the format [here](https://www.kernel.org/doc/Documentation/vm/pagemap.txt). The virt2phys function looks like this:
+
 ```c
 uint64_t virt2phys(void* p)
 {
@@ -292,7 +303,9 @@ uint64_t virt2phys(void* p)
 		// flips out the status bits, and shifts the physical frame address to 64 bits
 		return phys;
 ```
+
 To interact with the device we can write the code right bellow:
+
 ```c
 #include <assert.h>
 #include <fcntl.h>
@@ -374,6 +387,7 @@ Now we can interact with the device we got two primitive of arbitrary read / wri
 
 ## Exploitation
 
+
 I did a lot of things which didn't worked, so let's summarize all my thoughts:
 - If we leak the object's address, we can write at any location for which we know the base address, for example overwrite GOT pointers (but it will not succeed because of RELRO).
 - If we take a look at all the memory areas mapped in the qemu process we can see very large memory area in rwx, which means if we can leak its address and if we can redirect RIP, we just have to write and jmp on a shellcode written in this area.
@@ -389,6 +403,7 @@ I did a lot of things which didn't worked, so let's summarize all my thoughts:
 According to the environment, scan the heap memory is not reliable at all. I succeed to leak the rwx memory area, the binary base address, the heap base address from some contiguous objects in the heap. To redirect RIP, for some reason, the `destructor` is never called, so we have to craft a fake `MemoryRegionOps` structure. And that's how I read the flag on the disk. But the issue is that remotely, the offset between the heap base and the object is not the same, furthermore, the offset for the rwx memory leak is I guess different as well. So we have to find a different way to leak the object and the rwx memory area.
 
 ### Leak some memory areas
+
 
 To see where we can find pointers to the rwx memory area, we can make use of the `search` command in `pwndbg`:
 
@@ -425,6 +440,7 @@ pwndbg> search -4 0x7fc60400 -w
 [heap]          0x559a8a2dcf18 0x7fc60400                                                                                                                                                      
 [SKIP]
 ```
+
 Given that we don't want to get the leak from heap because of the unreliability we can see that there are available leaks in a writable area of the binary in `anon_559a89353`, indeed the page address looks like a PIE based binary address or an heap address (but the address is not marked heap), and if we look more carefully, the page is contiguous to the last file mapped memory area. Now we can leak the rwx memory area, lets' find a way to leak object's address! I asked on the hack.lu discord a hint for this leak because didn't have any idea. And finally it's quite easy, we can just leak the `opaque` pointer in the `MemoryRegion` structure which points to the object's address.
 
 If I summarize we have:
@@ -434,6 +450,7 @@ If I summarize we have:
 	- the rwx memory area (writable memory area that belongs to the binary).
 
 Then we can write this code:
+
 ```c
 // offset I got in gdb locally
 uint64_t base = read_offt(0x10c0 + 8*3) - 0xdef90; // heap leak
@@ -459,6 +476,7 @@ printf("[*] Addr obj: %lx\n", addr_obj);
 ```
 
 ### Write the shellcode
+
 
 I choose to write a shellcode to read the flag at `leak_rwx + 0x5000`, a known location we can easily read and print from the program. The shellcode is very simple:
 
@@ -500,6 +518,7 @@ iowrite(CLOUDINSPECT_MMIO_OFFSET_TRIGGER, 0x300);
 
 ### Craft fake MemoryRegionOps structure
 
+
 To cratf a fake `MemoryRegionOps`, I just read the original `MemoryRegionOps` structure, I edited the `read` handler, and I wrote it back, in a writable memory area, at `leak_rwx+0x2000`. Given that `sizeof(MemoryRegionOps)` is not superior to `DMA_SIZE`, I can read and write in one time. Then we got:
 
 ```c
@@ -532,8 +551,10 @@ iowrite(CLOUDINSPECT_MMIO_OFFSET_TRIGGER, 0x300);
 
 ### Hook mmio.ops + PROFIT
 
+
 We just have to replace the original `CoudInspect.mmio.ops` pointer to a pointer to the `fake_ops` structure.
 Then, next time we send a read request, the shellcode will be executed! And we will just need to retablish the original `CoudInspect.mmio.ops` pointer to read the flag at `leak_rwx+0x5000`! Which gives:
+
 ```c
 ioread(0x37); // trigger the read handler we control, then the shellcode is 
 // executed and the flag is written @ leak_rwx + 0x5000[enter link description here](cloudinspect)
@@ -574,6 +595,7 @@ Thanks for the organizers for this awesome event! The other pwn challenges look 
 You can the finale exploit [here](https://github.com/ret2school/ctf/blob/master/2021/hack.lu/pwn/cloudinspect/remote.c).
 
 ## Resources
+
 - [Interesting article about PCI devices](https://tldp.org/LDP/tlk/dd/pci.html)
 - [Linux kernel PCI documentation](https://www.kernel.org/doc/Documentation/filesystems/sysfs-pci.txt)
 - [Linux kernel pagemap documentation](https://www.kernel.org/doc/Documentation/vm/pagemap.txt)
