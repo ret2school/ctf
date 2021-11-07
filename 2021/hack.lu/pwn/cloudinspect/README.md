@@ -1,10 +1,4 @@
-﻿+++                                                                               
-title = "[Hack.lu 2021 - pwn] Cloudinspect"
-tags = ["ctf", "ret2school", "hack.lu", "nasm", "pwn", "heap", "arbitrary read", "arbitrary write", "hypervisor", "qemu", "2021"]
-date = "2021-11-07"
-+++
-
-# CloudInspect
+﻿# CloudInspect
 
 CloundInpect was a hypervisor exploitation challenge I did for the [Hack.lu event](https://flu.xxx).
 I didn't succeed to flag it within the 48 hours :(. But anyway I hope this write up will be interesting to read!
