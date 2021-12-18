@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <style>
+#outerdiv {
+    width: 1800px;
+    height: 1000px;
+    overflow: hidden;
+    position: relative;
+}
+
+#inneriframe {
+    position: absolute;
+    width: 100px;
+    height: 100px;
+    zoom: 20;
+    -moz-transform: scale(20);
+    -moz-transform-origin: 0 0;
+    -webkit-transform: scale(20);
+    -webkit-transform-origin: 0 0;
+    border: none;
+    left: -{{idx}}px;
+    top: -320px;
+}
+        </style>
+    </head>
+    <body>
+        <div id="outerdiv">
+            <iframe src="http://127.0.0.1:8000/flag#msg" id="inneriframe" scrolling=yes></iframe>
+        </div>
+    </body>
+</html>
