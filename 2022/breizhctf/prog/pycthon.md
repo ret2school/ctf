@@ -7,6 +7,8 @@
     
     Format : BZHCTF{}
 
+    Task: pycthon.cpython-38.pyc
+
 The provided file is a `.pyc` which contains compiled pseudo-code for a program written in Python.
 
 You just have to use the `uncompyle6` package with the following command: `uncompyle6 -o .pycthon.cpython-38.pyc`
