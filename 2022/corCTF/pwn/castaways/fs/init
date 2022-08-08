@@ -1,0 +1,61 @@
+#!/bin/sh
+
+export PS1='\[\033[01;35m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
+export PATH=/bin
+
+[ -d /dev ] || mkdir -m 0755 /dev
+[ -d /sys ] || mkdir /sys
+[ -d /proc ] || mkdir /proc
+[ -d /tmp ] || mkdir /tmp
+[ -d /run ] || mkdir /run
+[ -d /root ] || mkdir /root
+[ -d /etc ] || mkdir /etc
+[ -d /home ] || mkdir /home
+
+echo 'root:x:0:0:root:/root:/bin/sh' > /etc/passwd
+echo 'root:x:0:' > /etc/group
+chmod 644 /etc/passwd
+chmod 644 /etc/group
+
+adduser ctf --disabled-password 2>/dev/null
+
+chown -R root:root /
+chmod 700 -R /root
+
+insmod /cache_of_castaway.ko
+
+chown ctf:ctf /home/ctf
+chmod 777 /home/ctf
+chmod 755 /dev
+chmod 777 -R /tmp
+
+mount -t proc -o nodev,noexec,nosuid proc /proc
+mount -t sysfs -o nodev,noexec,nosuid sysfs /sys
+mount -t devtmpfs -o nosuid,mode=0755 udev /dev
+
+mkdir -p /dev/pts
+mkdir -p /var/lock
+mount -t devpts -o noexec,nosuid,gid=5,mode=0620 devpts /dev/pts || true
+
+ln -sf /proc/mounts /etc/mtab
+chmod 666 /dev/castaway
+
+ip link set eth0 up
+udhcpc -i eth0 -s /etc/udhcp/simple.script 1>/dev/null 2>/dev/null
+
+echo 1 > /proc/sys/kernel/kptr_restrict
+echo 1 > /proc/sys/kernel/dmesg_restrict
+echo 1 > /proc/sys/kernel/perf_event_paranoid
+
+echo "Boot took $(cut -d' ' -f1 /proc/uptime) seconds"
+
+cat /etc/motd
+
+cd /home/ctf
+
+setsid cttyhack setuidgid 1000 sh
+
+umount /proc
+umount /sys
+
+poweroff -d 1 -n -f
