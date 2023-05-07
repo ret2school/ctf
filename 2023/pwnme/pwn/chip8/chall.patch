@@ -1,0 +1,72 @@
+diff --git a/include/Machine.hpp b/include/Machine.hpp
+index af3d0d7..4288e15 100644
+--- a/include/Machine.hpp
++++ b/include/Machine.hpp
+@@ -17,6 +17,7 @@ class Machine{
+ private:
+ 	std::vector<uint8_t> registers; // V0-VF
+ 	std::vector<uint8_t> memory; // Memory
++	std::vector<uint8_t> flag;
+ 	uint16_t I; // Index register
+ 	std::vector<uint16_t> stack; // Stack
+ 	uint8_t SP; // Stack Pointer
+diff --git a/src/Machine.cpp b/src/Machine.cpp
+index d34680e..2321296 100644
+--- a/src/Machine.cpp
++++ b/src/Machine.cpp
+@@ -6,10 +6,13 @@
+ #include <chrono>
+ #include <thread>
+ 
++std::string FLAG = "PWNME{THIS_IS_A_SHAREHOLDER_AAAAAAAAAAAAAAAAAA}";
++
+ Machine::Machine(){
+ 	registers = std::vector<uint8_t>(16, 0);
+ 	stack = std::vector<uint16_t>(32, 0);
+ 	memory = std::vector<uint8_t>(4096, 0);
++	flag = std::vector<uint8_t>(128, 0);
+ 	PC = 0x200;
+ 	last_tick = std::chrono::steady_clock::now();
+ 	I = 0;
+@@ -134,8 +137,8 @@ void Machine::execute(uint16_t& opcode){
+
+ 	if(it != first_match.end()) (it->second)(opcode);
+ 	else {
+-		std::cout << "No match found for opcode " << std::hex << (int) opcode << "\n";
+-		std::cout << "This could be because this ROM uses SCHIP or another extension which is not yet supported.\n";
++		//std::cout << "No match found for opcode " << std::hex << (int) opcode << "\n";
++		//std::cout << "This could be because this ROM uses SCHIP or another extension which is not yet supported.\n";
+ 		std::exit(0);
+ 	}
+ }
+@@ -179,12 +182,13 @@ void Machine::print_machine_state(){
+ }
+ 
+ void Machine::runLoop(){
++	std::copy(FLAG.begin(), FLAG.end(), flag.begin());
+ 	while(true){
+ 		// Update display
+ 		if(ge.is_dirty()){ // Check if the screen has to be updated
+ 			ge.update_display();
+-			print_machine_state();
+-			std::cout << "Opcode " << ((uint16_t) (memory[PC]<<8) | (memory[PC+1])) << "\n";
++			//print_machine_state();
++			//std::cout << "Opcode " << ((uint16_t) (memory[PC]<<8) | (memory[PC+1])) << "\n";
+ 		}
+ 
+ 		// Update the keyboard buffer to check for all pressed keys
+diff --git a/src/c8emu.cpp b/src/c8emu.cpp
+index e65123b..590228e 100644
+--- a/src/c8emu.cpp
++++ b/src/c8emu.cpp
+@@ -17,6 +17,10 @@ void loadFile(const std::string& filename, std::vector<uint8_t>& prog){
+ int main(int argc, char ** argv){
+ 	Machine machine;
+ 
++	setbuf(stdin, NULL);
++	setbuf(stdout, NULL);
++	setbuf(stderr, NULL);
++
+ 	{ // Create block to deallocate the possibly large variable prog
+ 		// Load Instructions
+ 		std::vector<uint8_t> prog;
