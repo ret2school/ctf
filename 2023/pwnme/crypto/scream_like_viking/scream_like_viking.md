@@ -6,9 +6,7 @@
 > 
 > `nc 51.68.95.78 32773`
 
-<p align="center">
-<img alt="Shout Like Dovahkiin > Scream Like Viking" src="https://media.tenor.com/O8zaeaYI8NkAAAAd/fus-roh-dah-skyrim.gif">
-</p>
+{{<p align="center"><img src="https://media.tenor.com/O8zaeaYI8NkAAAAd/fus-roh-dah-skyrim.gif" alt="Shout Like Dovahkiin > Scream Like Viking"></p>}}
 
 This article is a write-up for "Scream Like Viking", a cryptography challenge from PwnMe 2023.
 
