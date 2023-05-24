@@ -1,0 +1,432 @@
+#+TITLE: Grey Cat The Flag 2023 Quals - Write-up for the challenge Crackme1 (Reverse)
+
+[[file:img/chall.png]]
+
+*TL;DR:* A challenge with obfuscated JavaScript, with some WebGL shaders to reverse.
+
+*Description:* When the correct key is entered, you will see a nice image.
+
+When we open the webpage, we can first inspect the HTML code.
+
+[[file:img/webpage.png]]
+
+#+begin_src html
+<body>
+    <canvas id="c"></canvas>
+    <div class="input-container">
+      <input id="textInput" type="text" placeholder="Enter Key">
+      <button id="submitButton" class="submit-button">Submit</button>
+    </div>
+
+    <p id="flag"></p>
+
+    <script src="https://webgl2fundamentals.org/webgl/resources/webgl-utils.js"></script>
+    <script src="https://webgl2fundamentals.org/webgl/resources/m4.js"></script>
+    <script src="/app.js"></script>
+</body>
+#+end_src
+
+We can first see that there is an empty <p> tag with id ~flag~, which will probably be used to display the flag when the correct key is entered.
+
+Moreover, the image is displayed inside of a canvas, and WebGL resources are loaded, we can then easily guess that the image will be displayed with some WebGL shaders.
+
+Then, we can finally take a look at the JS code of ~app.js~. And... aaargh, we have to deal with deeply obfuscated JavaScript, without any explicit identifier. 
+
+[[file:img/obfu_js.png]]
+
+* JavaScript Deobfuscation
+
+But... a few functions might raise our attention. First of all, the following function:
+
+#+begin_src javascript
+  function _0x3665() {
+
+      var _0x35624b = ['bindTexture', 'bindBuffer', 'useProgram', 'round', 'resizeCanvasToDisplaySize', 'addEventListener', 'TEXTURE_MIN_FILTER', 'webgl2', 'bindVertexArray', 'getAttribLocation', 'FLOAT', ...];
+
+      _0x3665 = function() {
+	  return _0x35624b;
+      };
+      return _0x3665();
+  }
+#+end_src
+
+where ~_0x35624b~ is a very large array of strings. And if we search where this function is called, it leads to the following function:
+
+#+begin_src javascript
+  function _0xb32e(_0x2b2797, _0x5d6142) {
+      var _0x366531 = _0x3665();
+      return _0xb32e = function(_0xb32e88, _0x42c1d9) {
+	  _0xb32e88 = _0xb32e88 - 0x171;
+	  var _0x3672ab = _0x366531[_0xb32e88];
+	  return _0x3672ab;
+      }, _0xb32e(_0x2b2797, _0x5d6142);
+  }
+#+end_src
+
+This function take as argument an index ~i~, and returns the string at index ~i-0x171~ in the large array. That's how most of the strings of the program are retrieved. We can then replace all the calls to this function with the corresponding string. I've done it by hand, by calling manually the function ~_0xb32e~ in the JavaScript console. You can find the resulting script [[file:src/app_deobf1.js][there]].
+
+Then, the following code raises our attention. Is it the key validation algorithm?
+
+#+begin_src javascript
+
+  window['addEventListener']('load', () => {
+      const _0x1bd4fc = document['getElementById']('submitButton');
+      _0x1bd4fc['addEventListener']('click', _0x2d148f);
+  });
+
+  function _0x2d148f() {
+      const _0x264178 = document['getElementById']('textInput');
+      var _0x3be76d = _0x264178['value'];
+      while (_0x3be76d['length'] < 0x400) _0x3be76d = _0x3be76d + _0x3be76d;
+      _0x3be76d = _0x3be76d['substring'](0x0, 0x400), _0x1d1d26(_0x3be76d);
+      var _0x5c36a9 = [0xc3, 0xb8, 0xb3, 0x42, 0xb6, 0xc2, 0x1c, 0xa4, 0xce, 0x45, 0x6, 0x3b, 0x1f, 0x1c, 0x66, 0xb1, 0x6c, 0x9a, 0x36, 0xe5, 0x14, 0xbf, 0x18, 0x6e],
+	  _0x35223f = _0x656fa5(_0x3be76d, 0x18),
+	  _0x258cbb = '';
+      for (var _0x2e4a9c = 0x0; _0x2e4a9c < 0x18; ++_0x2e4a9c) {
+	  _0x258cbb += String['fromCharCode'](_0x5c36a9[_0x2e4a9c] ^ _0x35223f[_0x2e4a9c]);
+      }
+      if (_0x258cbb['startsWith']('grey{')) document['querySelector']('#flag')['textContent'] = _0x258cbb;
+  }
+
+  function _0x656fa5(_0x51d5a4, _0x14e107) {
+      var _0x1c6239 = [],
+	  _0x51a6b8 = 0x0,
+	  _0xc583ec, _0x11ff50 = [];
+      for (var _0x5c4c24 = 0x0; _0x5c4c24 < 0x100; _0x5c4c24++) {
+	  _0x1c6239[_0x5c4c24] = _0x5c4c24;
+      }
+      for (_0x5c4c24 = 0x0; _0x5c4c24 < 0x100; _0x5c4c24++) {
+	  _0x51a6b8 = (_0x51a6b8 + _0x1c6239[_0x5c4c24] + _0x51d5a4['charCodeAt'](_0x5c4c24 % _0x51d5a4['length'])) % 0x100, _0xc583ec = _0x1c6239[_0x5c4c24], _0x1c6239[_0x5c4c24] = _0x1c6239[_0x51a6b8], _0x1c6239[_0x51a6b8] = _0xc583ec;
+      }
+      _0x5c4c24 = 0x0, _0x51a6b8 = 0x0;
+      for (var _0x11ada2 = 0x0; _0x11ada2 < _0x14e107; _0x11ada2++) {
+	  _0x5c4c24 = (_0x5c4c24 + 0x1) % 0x100, _0x51a6b8 = (_0x51a6b8 + _0x1c6239[_0x5c4c24]) % 0x100, _0xc583ec = _0x1c6239[_0x5c4c24], _0x1c6239[_0x5c4c24] = _0x1c6239[_0x51a6b8], _0x1c6239[_0x51a6b8] = _0xc583ec, _0x11ff50['push'](_0x1c6239[(_0x1c6239[_0x5c4c24] + _0x1c6239[_0x51a6b8]) % 0x100]);
+      }
+      return _0x11ff50;
+  }
+
+#+end_src
+
+After further deobfuscation, we have the following result:
+
+#+begin_src javascript
+
+  window['addEventListener']('load', () => {
+      document['getElementById']('submitButton')['addEventListener']('click', buttonClick);
+  });
+
+  function buttonClick() {
+      var key = document['getElementById']('textKey')['value'];
+      // We replicate the key up to a length of 0x400
+      while (key['length'] < 0x400)
+	  key = key + key;
+      key = key['substring'](0x0, 0x400);
+      display_image(key);
+      var cipher = [0xc3, 0xb8, 0xb3, 0x42, 0xb6, 0xc2, 0x1c, 0xa4, 0xce, 0x45, 0x6, 0x3b, 0x1f, 0x1c, 0x66, 0xb1, 0x6c, 0x9a, 0x36, 0xe5, 0x14, 0xbf, 0x18, 0x6e],
+	  key_sched = rc4(key, 0x18),
+	  flag = '';
+      for (var i = 0x0; i < 0x18; ++i) {
+	  flag += String['fromCharCode'](cipher[i] ^ key_sched[i]);
+      }
+      if (flag['startsWith']('grey{')) document['querySelector']('#flag')['textContent'] = flag;
+  }
+
+  function rc4(key, len) {
+      var a = [],
+	  j = 0x0,
+	  tmp, permutation = [];
+      for (var i = 0x0; i < 0x100; i++) {
+	  a[i] = i;
+      }
+      for (i = 0x0; i < 0x100; i++) {
+	  j = (j + a[i] + key['charCodeAt'](i % key['length'])) % 0x100;
+	  tmp = a[i];
+	  a[i] = a[j];
+	  a[j] = tmp;
+      }
+      i = 0x0, j = 0x0;
+      for (var k = 0x0; k < len; k++) {
+	  i = (i + 0x1) % 0x100;
+	  j = (j + a[i]) % 0x100;
+	  tmp = a[i];
+	  a[i] = a[j];
+	  a[j] = tmp;
+	  permutation['push'](a[(a[i] + a[j]) % 0x100]);
+      }
+      return permutation;
+  }
+
+#+end_src
+
+The flag is deciphered using RC4 with the key provided as input. But the RC4 implementation seems to have no vulnerabilities, and is just here to give us the flag when the correct key is entered. But how can we retrieve the correct key?
+
+Remember, the WebGL stuff to display the good image when the correct key is entered...
+
+* Reverse Engineering of WebGL Shaders 
+
+After deobfuscation, we have a function ~display_image~ which is called in the listener ~buttonClick~.
+
+#+begin_src javascript
+
+  function display_image(input) {
+      var a = [0x0, 0x0, 0x0, 0x0],
+	  b = [0x0, 0x0, 0x0, 0x0],
+	  c = [0x0, 0x0, 0x0, 0x0],
+	  d = [0x0, 0x0, 0x0, 0x0],
+	  e = [0x41, 0x41, 0x41, 0x41];
+      for (var i = 0x0; i < 0x104; ++i) {
+	  const _0x3d0205 = init_buffer_vertex(context_canvas, new Float32Array(a), a_shader),
+		_0x1bbc48 = init_buffer_vertex(context_canvas, new Float32Array(b), b_shader),
+		_0x12ff68 = init_buffer_vertex(context_canvas, new Float32Array(c), c_shader),
+		_0x358438 = init_buffer_vertex(context_canvas, new Float32Array(d), d_shader),
+		_0x31fd87 = init_buffer_vertex(context_canvas, new Float32Array(e), e_shader),
+		_0x5efde3 = context_canvas['createTransformFeedback']();
+	  context_canvas['bindTransformFeedback'](context_canvas['TRANSFORM_FEEDBACK'], _0x5efde3);
+	  const feedback_shader = init_buffer(context_canvas, a['length'] * 0x4);
+	  context_canvas['bindBufferBase'](context_canvas['TRANSFORM_FEEDBACK_BUFFER'], 0x0, feedback_shader);
+	  context_canvas['bindTransformFeedback'](context_canvas['TRANSFORM_FEEDBACK'], null);
+	  context_canvas['bindBuffer'](context_canvas['ARRAY_BUFFER'], null);
+	  context_canvas['useProgram'](program12);
+	  context_canvas['bindVertexArray'](_0x37ea82);
+	  context_canvas['bindTransformFeedback'](context_canvas['TRANSFORM_FEEDBACK'], _0x5efde3);
+	  context_canvas['beginTransformFeedback'](context_canvas['POINTS']);
+	  context_canvas['drawArrays'](context_canvas['POINTS'], 0x0, a['length']);
+	  context_canvas['endTransformFeedback']();
+	  context_canvas['bindTransformFeedback'](context_canvas['TRANSFORM_FEEDBACK'], null);
+	  // We get the feedback from the WebGL shader
+	  const f = new Float32Array(a['length']);
+	  context_canvas['bindBuffer'](context_canvas['ARRAY_BUFFER'], feedback_shader);
+	  context_canvas['getBufferSubData'](context_canvas['ARRAY_BUFFER'], 0x0, f);
+	  for (var j = 0x0; j < 0x4; ++j) {
+	      d[j] = Math['round'](f[j]) % 0x100;
+	      e = e['fill'](input['charCodeAt'](d[j]));
+	      a[j] = matrix1[d[0x0]][j];
+	      b[j] = matrix2[d[0x0]][j];
+	      c[j] = matrix3[d[0x0]][j];
+	  }
+	  context_canvas['uniform4fv'](s_shader, d);
+	  context_query_c['clearColor'](0x0, 0x0, 0x0, 0x0), context_query_c['clear'](context_canvas['COLOR_BUFFER_BIT']);
+	  context_query_c['useProgram'](program34);
+	  context_query_c['activeTexture'](context_query_c['TEXTURE0'] + 0x1);
+	  context_query_c['bindTexture'](context_query_c['TEXTURE_2D'], _0x3d5c0d);
+	  context_query_c['texParameteri'](context_query_c['TEXTURE_2D'], context_query_c['TEXTURE_WRAP_S'], context_query_c['CLAMP_TO_EDGE']);
+	  context_query_c['texParameteri'](context_query_c['TEXTURE_2D'], context_query_c['TEXTURE_WRAP_T'], context_query_c['CLAMP_TO_EDGE']);
+	  context_query_c['texParameteri'](context_query_c['TEXTURE_2D'], context_query_c['TEXTURE_MIN_FILTER'], context_query_c['NEAREST']);
+	  context_query_c['texParameteri'](context_query_c['TEXTURE_2D'], context_query_c['TEXTURE_MAG_FILTER'], context_query_c['NEAREST']);
+	  // We need to have d[0x1] = 1 to display the good image!
+	  context_query_c['activeTexture'](context_query_c['TEXTURE0']), context_query_c['bindTexture'](context_query_c['TEXTURE_2D'], array_images[d[0x1]]);
+	  context_query_c['bindVertexArray'](_0x5745db), context_query_c['drawArrays'](context_query_c['TRIANGLES'], 0x0, 0x6);
+      }
+  }
+
+#+end_src
+
+A new canvas is created, and its WebGL context is stored in ~context_canvas~. ~context_query_c~ is the WebGL context of the canvas displaying the image.
+
+For more details, you can find the final deobfuscated JS script [[file:src/app_deobf2.js][here]].
+
+Data is stored in three large matrices (here ~matrix1~, ~matrix2~, ~matrix3~)
+
+The canvas created doesn't display anything, but is associated to a WebGL shader which performs some computations to validate the flag. The code of the shader is the following:
+
+#+begin_src glsl
+  #version 300 es
+
+  uniform vec4 s;
+
+  in float a;
+  in float b;
+  in float c;
+  in float d;
+  in float e;
+
+  out float f;
+
+  void main() {
+      // equals to 0 if s.z is non-zero, a * d + b + c * e otherwise
+      f = (a * d + b + c * e) * (step(0.0f, -abs(s.z)));
+  }
+#+end_src
+
+At each iteration of ~i~ in the function ~display_image~, the output of the shader (~f~) is retrieved, the values of ~a, b, c, d, e~ are updated and the previous values of ~d~ are stored in the uniform vector ~s~
+
+The algorithm can be simplified and written in Python as follows (see full script [[file:src/check_flag.py][here]]):
+
+#+begin_src python
+
+  import sys
+
+  matrix1 = [[0x1, 0x0, 0x1, 0x1], ...]
+  matrix2 = [[0xe5, 0x0, 0x0, 0x0], ...]
+  matrix3 = [[0x0, 0x0, 0x0, 0x0], ...]
+
+  def compute(a,b,c,d,e):
+      res = a * d + b + c * e
+      #print(res)
+      if res >= 0:
+	  return res % 256
+      else:
+	  return - ((-res) % 256)
+
+  if __name__ == '__main__':
+      key = sys.argv[1]
+      a = [0x0, 0x0, 0x0, 0x0]
+      b = [0x0, 0x0, 0x0, 0x0]
+      c = [0x0, 0x0, 0x0, 0x0]
+      d = [0x0, 0x0, 0x0, 0x0]
+      e = [0x41, 0x41, 0x41, 0x41]
+
+      for i in range(0x104):
+	  if d[2]:
+	      d = [0 for j in range(4)]
+	  else:
+	      d = [compute(a[j],b[j],c[j],d[j],e[j]) for j in range(4)]
+	  e = [ord(key[d[3] % len(key)]) for j in range(4)]
+	  a = matrix1[d[0]].copy()
+	  b = matrix2[d[0]].copy()
+	  c = matrix3[d[0]].copy()
+	  print("After iteration " + str(i))
+	  print("a = " + str(a) + ", b = " + str(b) + ", c = " + str(c) + ", d = " + str(d) + ", e = " + str(e))
+
+      if d[1] == 1:
+	  print("Correct key!")
+      else:
+	  print("Wrong key :(")
+
+#+end_src
+
+* Flag
+
+If we run the previous algorithm with some random key, for instance ~abcdef~, we can observe the following:
+
+#+begin_src 
+[rlaspina@ARCH-RLS src] $ python check_flag.py abcdef
+After iteration 0
+a = [1, 0, 1, 1], b = [229, 0, 0, 0], c = [0, 0, 0, 0], d = [0, 0, 0, 0], e = [97, 97, 97, 97]
+After iteration 1
+a = [1, 0, 1, 1], b = [-72, 0, 0, 0], c = [0, 0, 0, 0], d = [229, 0, 0, 0], e = [97, 97, 97, 97]
+After iteration 2
+a = [1, 0, 1, 1], b = [-76, 0, 0, 0], c = [0, 0, 0, 0], d = [157, 0, 0, 0], e = [97, 97, 97, 97]
+After iteration 3
+a = [1, 0, 1, 1], b = [-24, 0, 0, 0], c = [0, 0, 0, 0], d = [81, 0, 0, 0], e = [97, 97, 97, 97]
+After iteration 4
+a = [1, 0, 1, 1], b = [97, 0, 0, 0], c = [0, 0, 0, 0], d = [57, 0, 0, 0], e = [97, 97, 97, 97]
+After iteration 5
+a = [1, 0, 1, 1], b = [-117, 0, 0, 0], c = [0, 0, 0, 0], d = [154, 0, 0, 0], e = [97, 97, 97, 97]
+After iteration 6
+a = [1, 0, 1, 1], b = [14, 0, 0, 0], c = [0, 0, 0, 0], d = [37, 0, 0, 0], e = [97, 97, 97, 97]
+After iteration 7
+a = [1, 0, 1, 1], b = [47, 0, 0, 0], c = [0, 0, 0, 0], d = [51, 0, 0, 0], e = [97, 97, 97, 97]
+After iteration 8
+a = [1, 0, 1, 1], b = [101, 0, 0, 0], c = [0, 0, 0, 0], d = [98, 0, 0, 0], e = [97, 97, 97, 97]
+After iteration 9
+a = [1, 0, 1, 1], b = [-159, 0, 0, 0], c = [0, 0, 0, 0], d = [199, 0, 0, 0], e = [97, 97, 97, 97]
+After iteration 10
+a = [1, 0, 1, 1], b = [-34, 0, 0, 0], c = [0, 0, 0, 0], d = [40, 0, 0, 0], e = [97, 97, 97, 97]
+After iteration 11
+a = [1, 0, 1, 1], b = [241, 0, 0, 0], c = [0, 0, 0, 0], d = [6, 0, 0, 0], e = [97, 97, 97, 97]
+After iteration 12
+a = [1, 0, 1, 1], b = [-121, 0, 0, 0], c = [0, 0, 0, 0], d = [247, 0, 0, 0], e = [97, 97, 97, 97]
+After iteration 13
+a = [1, 0, 1, 1], b = [94, 0, 0, 0], c = [0, 0, 0, 0], d = [126, 0, 0, 0], e = [97, 97, 97, 97]
+After iteration 14
+a = [1, 0, 1, 1], b = [-187, 0, 0, 0], c = [0, 0, 0, 0], d = [220, 0, 0, 0], e = [97, 97, 97, 97]
+After iteration 15
+a = [1, 0, 1, 1], b = [40, 0, 0, 0], c = [0, 0, 0, 0], d = [33, 0, 0, 0], e = [97, 97, 97, 97]
+After iteration 16
+a = [1, 0, 1, 1], b = [20, 0, 0, 0], c = [0, 0, 0, 0], d = [73, 0, 0, 0], e = [97, 97, 97, 97]
+After iteration 17
+a = [1, 0, 1, 1], b = [84, 0, 0, 0], c = [0, 0, 0, 0], d = [93, 0, 0, 0], e = [97, 97, 97, 97]
+After iteration 18
+a = [1, 0, 1, 1], b = [-31, 0, 0, 0], c = [0, 0, 0, 0], d = [177, 0, 0, 0], e = [97, 97, 97, 97]
+After iteration 19
+a = [1, 0, 1, 1], b = [-110, 0, 0, 0], c = [0, 0, 0, 0], d = [146, 0, 0, 0], e = [97, 97, 97, 97]
+After iteration 20
+a = [1, 0, 1, 1], b = [204, 0, 0, 0], c = [0, 0, 0, 0], d = [36, 0, 0, 0], e = [97, 97, 97, 97]
+After iteration 21
+a = [1, 0, 1, 1], b = [-201, 0, 0, 0], c = [0, 0, 0, 0], d = [240, 0, 0, 0], e = [97, 97, 97, 97]
+After iteration 22
+a = [1, 0, 1, 1], b = [-37, 0, 0, 0], c = [0, 0, 0, 0], d = [39, 0, 0, 0], e = [97, 97, 97, 97]
+After iteration 23
+a = [1, 0, 1, 1], b = [248, 0, 0, 0], c = [0, 0, 0, 0], d = [2, 0, 0, 0], e = [97, 97, 97, 97]
+After iteration 24
+a = [1, 0, 1, 1], b = [-138, 0, 0, 0], c = [0, 0, 0, 0], d = [250, 0, 0, 0], e = [97, 97, 97, 97]
+After iteration 25
+a = [1, 0, 1, 1], b = [35, 0, 0, 0], c = [0, 0, 0, 0], d = [112, 0, 0, 0], e = [97, 97, 97, 97]
+After iteration 26
+a = [1, 0, 1, 1], b = [-24, 0, 0, 0], c = [0, 0, 0, 0], d = [147, 0, 0, 0], e = [97, 97, 97, 97]
+After iteration 27
+a = [1, 0, 1, 1], b = [-55, 0, 0, 0], c = [0, 0, 0, 0], d = [123, 0, 0, 0], e = [97, 97, 97, 97]
+After iteration 28
+a = [1, 0, 1, 1], b = [94, 0, 0, 0], c = [0, 0, 0, 0], d = [68, 0, 0, 0], e = [97, 97, 97, 97]
+After iteration 29
+a = [1, 0, 1, 1], b = [46, 0, 0, 0], c = [0, 0, 0, 0], d = [162, 0, 0, 0], e = [97, 97, 97, 97]
+After iteration 30
+a = [1, 0, 1, 1], b = [-122, 0, 0, 0], c = [0, 0, 0, 0], d = [208, 0, 0, 0], e = [97, 97, 97, 97]
+After iteration 31
+a = [1, 0, 1, 1], b = [55, 0, 0, 0], c = [0, 0, 0, 0], d = [86, 0, 0, 0], e = [97, 97, 97, 97]
+After iteration 32
+a = [1, 0, 1, 1], b = [-20, 0, 0, 0], c = [0, 0, 0, 0], d = [141, 0, 0, 0], e = [97, 97, 97, 97]
+After iteration 33
+a = [1, 0, 1, 1], b = [-77, 0, 0, 0], c = [0, 0, 0, 0], d = [121, 0, 0, 0], e = [97, 97, 97, 97]
+After iteration 34
+a = [1, 0, 1, 1], b = [105, 0, -82, 2], c = [0, 0, 1, 0], d = [44, 0, 0, 0], e = [97, 97, 97, 97]
+After iteration 35
+a = [1, 0, 1, 1], b = [46, 0, 0, 0], c = [0, 0, 0, 0], d = [149, 0, 15, 2], e = [99, 99, 99, 99]
+After iteration 36
+a = [1, 0, 1, 1], b = [229, 0, 0, 0], c = [0, 0, 0, 0], d = [0, 0, 0, 0], e = [97, 97, 97, 97]
+#+end_src
+
+Until iteration 34, a deterministic pattern appears: the values of a,b,c,d does not depend yet on the key, since c is always equal to ~[0, 0, 0, 0]~. But at iteration 35, if ~a[2] * d[2] + b[2] + c[2] * e[2] = e[2] - 82~ is not zero, then ~d[2]~ will not be zero at next iteration, the vector ~d~ will be reset to ~[0, 0, 0, 0]~, and the cycle will repeat over and over from iteration 36.
+
+But... ~e[2]~ is actually the character of the flag at index ~d[3]~, here 0 (at iteration 34), therefore we must have ~key[0] = 82 = 'R'~.
+
+During the CTF, I was lazy so I retrieved one by one the characters of the key in the same way, but here is a nice script to get the key (full script [[file:src/solve.py][here]]):
+
+#+begin_src python
+
+  import sys
+
+  matrix1 = [[0x1, 0x0, 0x1, 0x1], ...]
+  matrix2 = [[0xe5, 0x0, 0x0, 0x0], ...]
+  matrix3 = [[0x0, 0x0, 0x0, 0x0], ...]
+
+  def compute(a,b,c,d,e):
+      res = a * d + b + c * e
+      #print(res)
+      if res >= 0:
+	  return res % 256
+      else:
+	  return - ((-res) % 256)
+
+  if __name__ == '__main__':
+      key = bytearray([0 for i in range(20)])
+
+      a = [0x0, 0x0, 0x0, 0x0]
+      b = [0x0, 0x0, 0x0, 0x0]
+      c = [0x0, 0x0, 0x0, 0x0]
+      d = [0x0, 0x0, 0x0, 0x0]
+      e = [0x41, 0x41, 0x41, 0x41]
+
+      for i in range(0x104):
+	  if b[2] != 0:
+	      key[d[3]] = -b[2]
+	  e = [key[d[3]] for j in range(4)]
+	  if d[2]:
+	      d = [0 for j in range(4)]
+	  else:
+	      d = [compute(a[j],b[j],c[j],d[j],e[j]) for j in range(4)]
+	      a = matrix1[d[0]].copy()
+	      b = matrix2[d[0]].copy()
+	      c = matrix3[d[0]].copy()
+
+      key_string = key.decode('utf-8')
+      print("The key is: " + key_string)
+
+#+end_src
+
+The key obtained is *REDchickenPIE*. We finally enter the key in the input field of the webpage, and... Yeaaaaaaah !!! :)
+
+[[file:img/good_cat.png]]
+
+*FLAG:* grey{y0u_h4d_fun?_e4a3d}
