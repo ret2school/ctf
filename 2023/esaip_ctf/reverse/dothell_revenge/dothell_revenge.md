@@ -1,7 +1,7 @@
 +++
 title: "[ESAIP CTF 2023] Dothell Revenge"
 date: 2023-05-27
-tags: ["ctf", "Alol", "reverse", "dotnet", "Z3"]
+tags: ["ctf", "Alol", "reverse", "dotnet", "Z3", "ESAIP CTF", "2023"]
 +++
 
 # Dothell Revenge
