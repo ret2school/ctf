@@ -1,0 +1,64 @@
+#!/bin/sh
+
+export PATH=/usr/sbin:/usr/bin:/sbin:/bin
+
+[ -d /dev ] || mkdir -m 0755 /dev
+# ln -sf /dev/null /dev/tty2
+# ln -sf /dev/null /dev/tty3
+# ln -sf /dev/null /dev/tty4
+
+[ -d /sys ] || mkdir /sys
+[ -d /proc ] || mkdir /proc
+[ -d /tmp ] || mkdir /tmp
+[ -d /run ] || mkdir /run
+[ -d /root ] || mkdir /root
+[ -d /etc ] || mkdir /etc
+[ -d /home ] || mkdir /home
+
+echo 'root:x:0:0:root:/root:/bin/sh' > /etc/passwd
+echo 'root:x:0:' > /etc/group
+chmod 644 /etc/passwd
+chmod 644 /etc/group
+
+adduser user --disabled-password
+
+chown -R root:root /
+chmod 700 -R /root
+chown user:user /home/user
+chmod 777 /home/user
+chmod 777 /tmp
+chmod 755 /dev
+chmod 0 /flag.txt
+
+mkdir -p /var/lock
+mount -t sysfs -o nodev,noexec,nosuid sysfs /sys
+mount -t proc -o nodev,noexec,nosuid proc /proc
+ln -sf /proc/mounts /etc/mtab
+mount -t devtmpfs -o nosuid,mode=0755 udev /dev
+mkdir -p /dev/pts
+mount -t devpts -o noexec,nosuid,gid=5,mode=0620 devpts /dev/pts || true
+mount -t tmpfs -o "noexec,nosuid,size=10%,mode=0755" tmpfs /run
+
+echo 2 > /proc/sys/kernel/kptr_restrict
+echo 2 > /proc/sys/kernel/perf_event_paranoid
+echo 1 > /proc/sys/kernel/dmesg_restrict
+
+# Mount Stuff
+mkdir /tmp/mount
+mount -t 9p -o trans=virtio,version=9p2000.L host0 /tmp/mount
+
+cp /dev/sda /exploit
+chmod +x /exploit
+insmod chall.ko
+
+# Register chardev, figure out run_cmd
+dmesg | grep mknod | awk -F "'" '{print $2}' | sh
+chmod 777 /dev/window
+
+echo -e "\nBoot time: $(cut -d' ' -f1 /proc/uptime)\n"
+
+setsid cttyhack setuidgid 0 sh --login
+
+umount /proc
+umount /sys
+poweroff -d 0 -f
