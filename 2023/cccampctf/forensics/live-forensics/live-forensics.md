@@ -31,7 +31,7 @@ We then download the binary with `scp`. A quick analysis with VirusTotal gives n
 
 ## The Injector
 
-It appears that the binary looks for a running `dropbear` process and for its libc mapping in memory. Then, the binary will drop a custom library `/tmp/libimplant.so` encrypted inside itself and decrypted "on-the-fly". It will afterwards replace the libc in the memory of the `dropbear` process with the dropped library in order to inject malicious code.
+It appears that the binary looks for a running `dropbear` process and for its libc mapping in memory. Then, the binary will drop a custom library `/tmp/libimplant.so` decrypted "on-the-fly". It will afterwards replace the libc in the memory of the `dropbear` process with the dropped library in order to inject malicious code.
 
 ```c
 sysinfo::traits::SystemExt::new_all();
@@ -84,10 +84,10 @@ At this point, my idea was to
 - run the malware.
 - get the flag in the capture
 
-**And that's when I fell into the trap...** since the malware didn't look "very malicious", I was lazy and the end of the CTF was approaching, so I didn't setup a VM and did these steps on my host.
-**Readers, don't do that. Don't be lazy, setup a VM. Even in CTF.**
+**And that's when I fell into the trap...** since the malware didn't look "very malicious", I was lazy and the end of the CTF was approaching, I didn't setup a VM and did these steps on my host.
+**Readers, don't do that. Don't be lazy, setup a VM. Even in CTF...**
 
-I missed a subtility: the malware do some requests with a hash in the URL, and the response of the C2 depends on the hash. Therefore, if the binary is ran from outside the live machine, the malware detects it and... shutdown the computer... :clown_face:
+I missed a subtility: the malware do some requests with a hash in the URL, and the response of the C2 depends on the hash. Therefore, if the binary is ran from outside the live machine, the malware detects it and... shutdowns the computer... (:
 
 ## Flag
 
